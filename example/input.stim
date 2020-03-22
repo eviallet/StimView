@@ -1,0 +1,24 @@
+// PINB &=~0x10 non accepté : PINB &= 0xEF
+// ATTENTION : les fichiers output ne sont pas écrasés à chaque exécution, mais appendés.
+
+$log OCR0A
+$log TCNT0
+$log PORTB
+$log PINB
+$log TCCR0A
+$log TCCR0B
+$startlog output.log
+
+#50
+
+$repeat 5
+	PINB |= 0x10
+	#10
+	PINB &= 0xEF
+	#10
+$endrep
+
+#400
+
+$stoplog
+$break
