@@ -7,6 +7,7 @@
 #include <QGraphicsSimpleTextItem>
 #include <callout.h>
 #include <QLineSeries>
+#include <math.h>
 
 class QCursorView : public QtCharts::QChartView {
     Q_OBJECT

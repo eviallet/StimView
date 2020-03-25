@@ -47,7 +47,7 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="1" rowspan="2">
+    <item row="0" column="1" rowspan="5">
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QVBoxLayout" name="plotEnableLayout"/>
@@ -76,6 +76,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="unit">
+        <property name="text">
+         <string>𝑥 : cycles CPU</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="verticalSpacer_2">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -96,13 +106,25 @@
            <string>Zoom X</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>3</number>
+           </property>
+           <property name="topMargin">
+            <number>3</number>
+           </property>
+           <property name="rightMargin">
+            <number>3</number>
+           </property>
+           <property name="bottomMargin">
+            <number>3</number>
+           </property>
            <item>
             <widget class="QSpinBox" name="zoomMin">
              <property name="enabled">
               <bool>true</bool>
              </property>
              <property name="maximum">
-              <number>100</number>
+              <number>2147483647</number>
              </property>
             </widget>
            </item>
@@ -112,7 +134,7 @@
               <bool>true</bool>
              </property>
              <property name="maximum">
-              <number>100</number>
+              <number>2147483647</number>
              </property>
             </widget>
            </item>
@@ -127,13 +149,25 @@
          <string>Zoom Y</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_5">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
          <item>
           <widget class="QSpinBox" name="zoomMinY">
            <property name="enabled">
             <bool>true</bool>
            </property>
            <property name="maximum">
-            <number>100</number>
+            <number>2147483647</number>
            </property>
           </widget>
          </item>
@@ -143,7 +177,7 @@
             <bool>true</bool>
            </property>
            <property name="maximum">
-            <number>100</number>
+            <number>2147483647</number>
            </property>
           </widget>
          </item>
@@ -218,8 +252,15 @@
      <string>Afficher des bits</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuConfiguration">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="actionCadencement"/>
+   </widget>
    <addaction name="menuCharger_un_log"/>
    <addaction name="menuAfficher_des_bits"/>
+   <addaction name="menuConfiguration"/>
   </widget>
   <action name="actionCharger_un_log">
    <property name="text">
@@ -227,6 +268,11 @@
    </property>
    <property name="shortcutVisibleInContextMenu">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionCadencement">
+   <property name="text">
+    <string>Cadencement</string>
    </property>
   </action>
  </widget>

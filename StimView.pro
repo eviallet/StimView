@@ -25,12 +25,14 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     callout.cpp \
-    qcursorview.cpp
+    qcursorview.cpp \
+    cadencementdialog.cpp
 
 HEADERS += \
         mainwindow.h \
     callout.h \
-    qcursorview.h
+    qcursorview.h \
+    cadencementdialog.h
 
 FORMS += \
         mainwindow.ui

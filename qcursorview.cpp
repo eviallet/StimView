@@ -29,7 +29,7 @@ void QCursorView::tooltip(QPointF point, bool state) {
         else // "Décimal"
             nb = QString("d").append(QString::number(y,10));
 
-        m_tooltip->setText(QString("X: %1 \nY: %2 ").arg(round(point.x())).arg(nb));
+        m_tooltip->setText(QString("X: %1 \nY: %2 ").arg(point.x()).arg(nb));
         m_tooltip->setAnchor(point);
         m_tooltip->setZValue(11);
         m_tooltip->updateGeometry();

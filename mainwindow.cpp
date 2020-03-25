@@ -39,6 +39,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->zoomBtn, SIGNAL(clicked(bool)), this, SLOT(zoom()));
     connect(ui->unzoomBtn, SIGNAL(clicked(bool)), this, SLOT(zoomOut()));
     connect(ui->actionCharger_un_log, SIGNAL(triggered()), this, SLOT(plotFile()));
+
+    connect(ui->actionCadencement, SIGNAL(triggered()), this, SLOT(showCadencementDialog()));
 }
 
 
@@ -74,6 +76,12 @@ void MainWindow::clearScreen() {
     ui->groupBox_2->setEnabled(false);
     ui->zoomBtn->setEnabled(false);
     ui->unzoomBtn->setEnabled(false);
+
+    fileLoaded = false;
+    ui->unit->setText("𝑥 : cycles CPU");
+    clock = 16;
+    prescaler = 1;
+    cpu = true;
 }
 
 
@@ -96,6 +104,8 @@ void MainWindow::plotFile() {
     ui->groupBox_2->setEnabled(true);
     ui->zoomBtn->setEnabled(true);
     ui->unzoomBtn->setEnabled(true);
+
+    fileLoaded = true;
 }
 
 /**
@@ -105,7 +115,7 @@ void MainWindow::plotFile() {
 QStringList MainWindow::loadStimFile() {
     QStringList ret;
 
-    QString fileName = QFileDialog::getOpenFileName(this,tr("Ouvrir un log"), "", tr("Fichiers log (*.log *.txt *.stim)"));
+    QString fileName = QFileDialog::getOpenFileName(this,tr("Ouvrir un log"), QDir::currentPath(), tr("Fichiers log (*.log *.txt *.stim)"));
     QFile file(fileName);
     if(!file.open(QFile::ReadOnly)) {
         ret.append("! Erreur d'ouverture du fichier");
@@ -164,8 +174,10 @@ QList<QLineSeries*> MainWindow::stimToSerie(QStringList file) {
      * Cette seconde liste est composée à chaque index de : temps absolu de chgt d'état + valeur de l'état
     */
     QList<QPair<QString, QList<QPair<int, int>>>> regs;
-    quint32 absoluteTime = 0;
+    quint64 absoluteTime = 0;
     maxY = 0;
+
+    bool firstPoint = true;
 
     progressBar->setVisible(true);
 
@@ -177,6 +189,11 @@ QList<QLineSeries*> MainWindow::stimToSerie(QStringList file) {
         if(file[i][0]=="#") {
             sscanf(file[i].toLatin1().data(), "#%d", &clk);
             absoluteTime += clk;
+
+            if(firstPoint) {
+                minX = clk;
+                firstPoint = false;
+            }
             // pour chaque registre suivant
             j = i+1;
             while(j < file.size() && file[j][0] != "#") {
@@ -201,6 +218,7 @@ QList<QLineSeries*> MainWindow::stimToSerie(QStringList file) {
 
     maxX = absoluteTime;
     zoomMin->setMaximum(maxX);
+    zoomMin->setValue(minX);
     zoomMax->setMaximum(maxX);
     zoomMax->setValue(maxX);
     zoomMinY->setMaximum(maxY);
@@ -310,13 +328,12 @@ void MainWindow::toggleBit(bool unused) {
                 QLineSeries* s = (QLineSeries*)bitView->chart()->series().at(j);
                 QVector<QPointF> pointsOld = s->pointsVector();
                 unsigned long pointsOldSize = pointsOld.size();
-                QList<QPointF> pointsNew;
+                QVector<QPointF> pointsNew;
                 for(int k=0; k<pointsOldSize; k++) {
                     pointsNew.append(QPointF(pointsOld.at(0).x(), pointsOld.at(0).y()-DIGITAL_SPACING));
                     pointsOld.pop_front();
                 }
-                s->clear();
-                s->append(pointsNew);
+                s->replace(pointsNew);
             }
             bitMaxY = bitView->chart()->series().count()*DIGITAL_SPACING + 1;
             zoom();
@@ -356,7 +373,7 @@ void MainWindow::toggleBit(bool unused) {
 void MainWindow::zoom() {
     /// axes X
     QList<QAbstractAxis*> xAxis = chartView->chart()->axes(Qt::Horizontal);
-    quint32 min = 0, max = maxX;
+    quint64 min = minX, max = maxX;
     if(zoomMin->value() >= 0 && zoomMin->value() < zoomMax->value())
         min = zoomMin->value();
     if(zoomMax->value() > 0 && zoomMax->value() > zoomMin->value() && zoomMax->value() <= maxX)
@@ -374,7 +391,7 @@ void MainWindow::zoom() {
     /// axes Y
     QList<QAbstractAxis*> yAxis = chartView->chart()->axes(Qt::Vertical);
     for(int i=0; i<yAxis.size(); i++) {
-        int min = 0, max = maxY;
+        int min = minX, max = maxY;
         if(zoomMinY->value() >= 0 && zoomMinY->value() < zoomMaxY->value())
             min = zoomMinY->value();
         if(zoomMaxY->value() > 0 && zoomMaxY->value() > zoomMinY->value() && zoomMaxY->value() <= maxY)
@@ -393,15 +410,15 @@ void MainWindow::zoomOut() {
     /// axes X
     QList<QAbstractAxis*> xAxis = chartView->chart()->axes(Qt::Horizontal);
     for(int i=0; i<xAxis.size(); i++) {
-        xAxis[i]->setMin(0);
+        xAxis[i]->setMin(minX);
         xAxis[i]->setMax(maxX);
     }
     QList<QAbstractAxis*> xAxisBitView = bitView->chart()->axes(Qt::Horizontal);
     for(int i=0; i<xAxisBitView.size(); i++) {
-        xAxisBitView[i]->setMin(0);
+        xAxisBitView[i]->setMin(minX);
         xAxisBitView[i]->setMax(maxX);
     }
-    zoomMin->setValue(0);
+    zoomMin->setValue(minX);
     zoomMax->setValue(maxX);
 
     /// axes Y
@@ -417,6 +434,162 @@ void MainWindow::zoomOut() {
     }
     zoomMinY->setValue(0);
     zoomMaxY->setValue(maxY);
+}
+
+
+/// =============================================================================
+///                                     TIME AXIS
+/// =============================================================================
+
+void MainWindow::showCadencementDialog() {
+    if(!fileLoaded) {
+        QMessageBox::information(this, "StimView", "Aucun fichier chargé.");
+        return;
+    }
+
+    CadencementDialog* dialog = new CadencementDialog(this, clock, prescaler, cpu);
+
+    connect(dialog, SIGNAL(cadencementChangedClock(int,int)), this, SLOT(changeClock(int,int)));
+    connect(dialog, SIGNAL(cadencementChangedCPU()), this, SLOT(setCPUCyclesView()));
+
+    dialog->show();
+}
+
+qreal MainWindow::convertCPUtoCLK(qreal x) {
+    return x*prescaler/(clock*1e6);
+}
+
+qreal MainWindow::convertCLKtoCPU(qreal x) {
+    return x*(clock*1e6)/(pow(10,incr-1)*prescaler);
+}
+
+/**
+ * Example :
+    clock = 16e6
+    ps = 1
+    -> 1 cycle CPU = 1/16e6 s < 1µs
+
+    newCLK = 8e6
+    ps = 8
+    -> 1 cycle CPU = 1/1e6 s = 1µs
+
+    newX = oldX * 16/1 (pour > 1) = oldCLK/newCLK
+ */
+qreal MainWindow::convertCLKtoCLK(qreal x, int newClock, int newPrescaler) {
+    return x*(newPrescaler*clock)/(prescaler*newClock);
+}
+
+void MainWindow::changeClock(int newClock, int newPrescaler) {
+    if(cpu) {
+        this->clock = newClock;
+        this->prescaler = newPrescaler;
+    } else if(newClock==clock && newPrescaler==prescaler)
+        return;
+
+    QList<QAbstractSeries*> series = chartView->chart()->series();
+    series.append(bitView->chart()->series());
+
+    qreal unit = 1;
+    bool setUnit = true;
+    if(cpu)
+        incr = 1;
+
+    for(int i=0; i<series.size(); i++) {
+        QLineSeries* serie = (QLineSeries*)series.at(i);
+        QVector<QPointF> pointsNew;
+        for(QPointF point: serie->pointsVector()) {
+            if(cpu)
+                pointsNew.append(QPointF(convertCPUtoCLK(point.x())*unit, point.y()));
+            else
+                pointsNew.append(QPointF(convertCLKtoCLK(point.x(), newClock, newPrescaler)*unit, point.y()));
+
+            if(setUnit) {
+                // find the unit, eg the power of 10 necessary to be > 1.
+                // for example, at 1MHz, we should have 1µs so a unit of 10^6. (multiplier to be above or equal to 1 from µs)
+                QPointF firstPoint = pointsNew.first();
+                pointsNew.pop_front();
+                while(firstPoint.x()*unit < 1 && incr < 10) {
+                    unit *= 10;
+                    incr++;
+                }
+                if(!cpu) {
+                    // useful for prescaler changes
+                    while(firstPoint.x()*unit > 1) {
+                        unit /= 10;
+                        incr--;
+                    }
+                    unit*=10;
+                    incr++;
+                }
+                firstPoint.setX(firstPoint.x()*unit);
+                pointsNew.append(firstPoint);
+                setUnit = false;
+
+                // by design, the first serie in the chart is the one with the first state change
+            }
+        }
+        serie->replace(pointsNew);
+        if(i==0) {
+            minX = serie->points().first().x();
+            maxX = serie->points().last().x();
+            // si le dernier point a une partie fractionnaire (ex 34.5), on élargi l'échelle à 35.
+            // cette étape n'est pas nécessaire pour le premier point (1.5 est toujours tronqé à 1 en passant en int)
+            if(abs(maxX-serie->points().last().x()) != 0)
+                maxX++;
+        }
+    }
+
+
+    QString exp;
+    switch(incr) {
+        case 0: exp = "\u2070"; break;
+        case 1: exp = "\u00b9"; break;
+        case 2: exp = "\u00b2"; break;
+        case 3: exp = "\u00b3"; break;
+        case 4: exp = "\u2074"; break;
+        case 5: exp = "\u2075"; break;
+        case 6: exp = "\u2076"; break;
+        case 7: exp = "\u2077"; break;
+        case 8: exp = "\u2078"; break;
+        case 9: exp = "\u2079"; break;
+    }
+    ui->unit->setText(QString("𝑥 : 10㆒%1 s").arg(exp));
+
+    zoomOut();
+
+    cpu = false;
+    if(!cpu) {
+        this->clock = newClock;
+        this->prescaler = newPrescaler;
+    }
+}
+
+void MainWindow::setCPUCyclesView() {
+    if(cpu)
+        return;
+
+    QList<QAbstractSeries*> series = chartView->chart()->series();
+    series.append(bitView->chart()->series());
+
+    for(int i=0; i<series.size(); i++) {
+        QLineSeries* serie = (QLineSeries*)series.at(i);
+        QVector<QPointF> pointsNew;
+        for(QPointF point: serie->pointsVector())
+            pointsNew.append(QPointF(convertCLKtoCPU(point.x()), point.y()));
+        serie->replace(pointsNew);
+        if(i==0) {
+            minX = serie->points().first().x();
+            maxX = serie->points().last().x();
+            if(abs(maxX-serie->points().last().x()) != 0)
+                maxX++;
+        }
+    }
+
+    ui->unit->setText("𝑥 : cycles CPU");
+
+    zoomOut();
+
+    cpu = true;
 }
 
 
