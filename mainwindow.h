@@ -19,6 +19,7 @@
 #include <cadencementdialog.h>
 
 #define DIGITAL_SPACING 1.25
+#define PREF_FILE "prefs.cfg"
 
 namespace Ui {
     class MainWindow;

@@ -115,12 +115,31 @@ void MainWindow::plotFile() {
 QStringList MainWindow::loadStimFile() {
     QStringList ret;
 
-    QString fileName = QFileDialog::getOpenFileName(this,tr("Ouvrir un log"), QDir::currentPath(), tr("Fichiers log (*.log *.txt *.stim)"));
+
+    // search if there is a PREF_FILE
+    QString defaultDir = QDir::currentPath();
+    QFile lastDir(PREF_FILE);
+    if(lastDir.open(QFile::ReadOnly)) {
+        defaultDir = QString(lastDir.readAll());
+        lastDir.close();
+    }
+
+    // show dialog to select a file
+    QString fileName = QFileDialog::getOpenFileName(this,tr("Ouvrir un log"), defaultDir, tr("Fichiers log (*.log *.txt *.stim)"));
     QFile file(fileName);
     if(!file.open(QFile::ReadOnly)) {
         ret.append("! Erreur d'ouverture du fichier");
         return ret;
     }
+
+    // save selected file path
+    if(lastDir.exists())
+        lastDir.remove();
+    lastDir.open(QFile::WriteOnly);
+    lastDir.write(fileName.toLatin1());
+    lastDir.close();
+
+
     QString data = QString(file.readAll());
     file.close();
     ret = data.replace("\r","").split('\n');
