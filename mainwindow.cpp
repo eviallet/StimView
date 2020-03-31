@@ -82,6 +82,7 @@ void MainWindow::clearScreen() {
     clock = 16;
     prescaler = 1;
     cpu = true;
+    incr = 0;
 }
 
 
@@ -348,7 +349,7 @@ void MainWindow::toggleBit(bool unused) {
                 QVector<QPointF> pointsOld = s->pointsVector();
                 unsigned long pointsOldSize = pointsOld.size();
                 QVector<QPointF> pointsNew;
-                for(int k=0; k<pointsOldSize; k++) {
+                for(unsigned long k=0; k<pointsOldSize; k++) {
                     pointsNew.append(QPointF(pointsOld.at(0).x(), pointsOld.at(0).y()-DIGITAL_SPACING));
                     pointsOld.pop_front();
                 }
@@ -479,7 +480,7 @@ qreal MainWindow::convertCPUtoCLK(qreal x) {
 }
 
 qreal MainWindow::convertCLKtoCPU(qreal x) {
-    return x*(clock*1e6)/(pow(10,incr-1)*prescaler);
+    return x*(clock*1e6)/(pow(10,incr)*prescaler);
 }
 
 /**
@@ -511,7 +512,7 @@ void MainWindow::changeClock(int newClock, int newPrescaler) {
     qreal unit = 1;
     bool setUnit = true;
     if(cpu)
-        incr = 1;
+        incr = 0;
 
     for(int i=0; i<series.size(); i++) {
         QLineSeries* serie = (QLineSeries*)series.at(i);
@@ -552,7 +553,7 @@ void MainWindow::changeClock(int newClock, int newPrescaler) {
             minX = serie->points().first().x();
             maxX = serie->points().last().x();
             // si le dernier point a une partie fractionnaire (ex 34.5), on élargi l'échelle à 35.
-            // cette étape n'est pas nécessaire pour le premier point (1.5 est toujours tronqé à 1 en passant en int)
+            // cette étape n'est pas nécessaire pour le premier point (1.5 est toujours tronqué à 1 en passant en int)
             if(abs(maxX-serie->points().last().x()) != 0)
                 maxX++;
         }
